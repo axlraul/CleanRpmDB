@@ -1,0 +1,27 @@
+---
+- hosts: 127.0.0.1
+  become: yes
+  remote_user: root
+  tasks: 
+  - name: Check if path exists
+    stat:
+      path: /tools/scripts/TEAM/fixRpmBD
+    register: stat_result_path
+  - name: Check that the fixRpmBD.bash exists 
+    stat: 
+      path: /tools/scripts/TEAM/fixRpmBD/fixRpmBD.bash
+    register: stat_result_file  
+  - name: Creates directory
+    file:
+      path: /tools/scripts/TEAM/fixRpmBD
+      state: directory
+    when: stat_result_path.stat.exists == false
+  - name: Copy the template, if it doesnt exist already 
+    template: 
+      src: fixRpmDB.j2 
+      dest: /tools/scripts/TEAM/fixRpmBD/fixRpmBD.bash 
+    when: stat_result_file.stat.exists == False
+  - name: Run a script with arguments (free form)
+    shell: /bin/sh /tools/scripts/TEAM/fixRpmBD/fixRpmBD.bash
+    register: sh
+  - debug: var=sh.stdout_lines

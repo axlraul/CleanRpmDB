@@ -1,0 +1,39 @@
+#!/bin/bash
+
+echo "Verificar procesos corriendo"
+PROC_EXIST=$(pgrep "rpm|yum" | wc -l)
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/sbin:/bin
+
+if [[ $PROC_EXIST -gt 0 ]]
+then
+  echo "Hay RPM o yum corriendo, cancelo"
+  exit 2
+fi
+
+echo "Verificar DB de RPM"
+RPM_DB_STATUS=$(rpm -qa kernel 2>&1 | grep 'error: db' >/dev/null)$?
+if [[ $RPM_DB_STATUS -eq 0 ]]
+then
+  echo "Reparacion de RPM DB"
+  rm -f /var/lib/rpm/__db*
+  rm -f /var/lib/rpm/.rpm.lock
+  rm -f /var/lib/rpm/.dbenv.lock
+  rpm --rebuilddb
+  /usr/lib/rpm/rpmdb_verify /var/lib/rpm/Packages
+  yum clean all
+
+  RPM_DB_STATUS=$(rpm -qa kernel >/dev/null)$?
+  if [[ $RPM_DB_STATUS -eq 0 ]]
+  then
+    echo "La DB de RPM fue reparada"
+    exit 1
+  else
+    echo "No es posible reparar"
+    exit 2
+  fi
+else
+  echo "La DB de RPM esta OK"
+  exit 0
+fi
+
